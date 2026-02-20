@@ -398,3 +398,678 @@ function renderCashflowChart() {
 
     const labels = monthLabels;
     const incomeData = labels.map((m) => months[m].income);
+    const expenseData = labels.map((m) => months[m].expense);
+
+    // Destroy existing chart if it exists
+    if (cashflowChart instanceof Chart) {
+        cashflowChart.destroy();
+    }
+
+    const ctx = cashflowCanvas.getContext("2d");
+    cashflowChart = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: "Income",
+                    data: incomeData,
+                    borderColor: "#2f855a",
+                    backgroundColor: "rgba(47, 133, 90, 0.1)",
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: "#2f855a",
+                    pointBorderColor: "#f0f4f8",
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                },
+                {
+                    label: "Expense",
+                    data: expenseData,
+                    borderColor: "#f56565",
+                    backgroundColor: "rgba(245, 101, 101, 0.1)",
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: "#f56565",
+                    pointBorderColor: "#f0f4f8",
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: "#718096",
+                        font: { size: 12 }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: "#718096" },
+                    grid: { color: "rgba(113, 128, 150, 0.1)" }
+                },
+                x: {
+                    ticks: { color: "#718096" },
+                    grid: { color: "rgba(113, 128, 150, 0.1)" }
+                }
+            }
+        }
+    });
+
+    console.log("✓ Cashflow monthly line chart rendered");
+}
+
+function renderExpensesCategoryChart() {
+    const expensesCategoryCanvas = document.getElementById("expensesCategoryChart");
+    if (!expensesCategoryCanvas) {
+        console.error("❌ expensesCategoryChart canvas not found!");
+        return;
+    }
+
+    const rangeLabel = state.timeRange.breakdown;
+    const { filtered } = getTransactionsInRange(rangeLabel);
+    const breakdown = getCategoryBreakdown(state.breakdownType, filtered);
+    const categories = Object.keys(breakdown);
+    const amounts = categories.map(c => breakdown[c].amount);
+
+    // Color palette for pie chart
+    const colors = [
+        "#7fd3a1",
+        "#2f855a",
+        "#f56565",
+        "#ed8936",
+        "#ecc94b",
+        "#38a169",
+        "#4299e1",
+        "#9f7aea",
+        "#ed64a6"
+    ];
+
+    // Destroy existing chart if it exists
+    if (expensesCategoryChart instanceof Chart) {
+        expensesCategoryChart.destroy();
+    }
+
+    const typeLabel = state.breakdownType === "income" ? "Income" : "Expense";
+    const ctx = expensesCategoryCanvas.getContext("2d");
+    expensesCategoryChart = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+            labels: categories,
+            datasets: [
+                {
+                    data: amounts,
+                    backgroundColor: colors.slice(0, categories.length),
+                    borderColor: "#f0f4f8",
+                    borderWidth: 2
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: "right",
+                    labels: {
+                        color: "#718096",
+                        font: { size: 12 },
+                        padding: 15
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = formatCurrency(context.parsed);
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return `${value} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    console.log(`✓ ${typeLabel} category breakdown chart rendered`);
+}
+
+function getFilteredTransactions() {
+    return state.transactions.filter((transaction) => {
+        const matchesSearch = transaction.name.toLowerCase().includes(state.filters.search);
+        const matchesType = state.filters.type === "All" || transaction.type === state.filters.type;
+        const matchesDate = !state.filters.date || transaction.date === state.filters.date;
+        const matchesCategory = state.filters.category === "All" || transaction.category === state.filters.category;
+        const matchesAmount = !state.filters.minAmount || transaction.amount >= Number(state.filters.minAmount);
+        const matchesCard = state.filters.card === "All" || transaction.card === state.filters.card;
+
+        return matchesSearch && matchesType && matchesDate && matchesCategory && matchesAmount && matchesCard;
+    });
+}
+
+function renderTransactions() {
+    if (!elements.transactionsBody) {
+        console.error("transactionsBody element not found");
+        return;
+    }
+
+    const filtered = getFilteredTransactions();
+    console.log("Filtered transactions:", filtered);
+    
+    elements.transactionsBody.innerHTML = "";
+
+    if (!filtered.length) {
+        const emptyRow = document.createElement("tr");
+        const emptyCell = document.createElement("td");
+        emptyCell.colSpan = 5;
+        emptyCell.textContent = "No transactions found";
+        emptyCell.style.textAlign = "center";
+        emptyCell.style.color = "#718096";
+        emptyRow.appendChild(emptyCell);
+        elements.transactionsBody.appendChild(emptyRow);
+        return;
+    }
+
+    filtered.forEach((transaction) => {
+        const row = document.createElement("tr");
+        const amountClass = transaction.type === "income" ? "amount-income" : "amount-expense";
+        const amountSign = transaction.type === "income" ? "+" : "-";
+
+        row.innerHTML = `
+            <td>${highlightMatch(transaction.name, state.filters.search)}</td>
+            <td>${escapeHtml(transaction.card)}</td>
+            <td>${escapeHtml(transaction.date)} ${escapeHtml(transaction.time)}</td>
+            <td class="${amountClass}">${amountSign}${formatCurrency(transaction.amount)}</td>
+            <td>${escapeHtml(transaction.description || "-")}</td>
+        `;
+
+        elements.transactionsBody.appendChild(row);
+    });
+}
+
+function updateFilters() {
+    state.filters.search = (elements.searchInput.value || "").trim().toLowerCase();
+    state.filters.type = elements.typeFilter.value || "All";
+    state.filters.date = elements.dateFilter.value || "";
+    state.filters.category = elements.categoryFilter.value || "All";
+    state.filters.minAmount = elements.amountFilter.value || "";
+    state.filters.card = elements.cardFilter.value || "All";
+
+    renderTransactions();
+    renderCashflowChart();
+    renderExpensesCategoryChart();
+}
+
+function showSection(sectionId) {
+    elements.sections.forEach((section) => {
+        section.classList.add("hidden");
+    });
+
+    const activeSection = document.querySelector(sectionId);
+    if (activeSection) {
+        activeSection.classList.remove("hidden");
+    }
+
+    elements.navLinks.forEach((link) => {
+        link.classList.remove("active");
+        if (link.getAttribute("href") === sectionId) {
+            link.classList.add("active");
+        }
+    });
+}
+
+function setInitialSection() {
+    const hash = window.location.hash || "#transactions";
+    if (document.querySelector(hash)) {
+        showSection(hash);
+    } else {
+        showSection("#transactions");
+    }
+}
+
+function validateField(input, rule, message) {
+    if (!input) {
+        console.error("Input element is null:", input);
+        return false;
+    }
+    
+    const value = input.value.trim();
+    const errorElement = document.querySelector(`[data-error-for="${input.id}"]`);
+
+    if (!value) {
+        if (errorElement) {
+            errorElement.textContent = "This field is required";
+        }
+        return false;
+    }
+
+    if (rule && !rule.test(value)) {
+        if (errorElement) {
+            errorElement.textContent = message;
+        }
+        return false;
+    }
+
+    if (errorElement) {
+        errorElement.textContent = "";
+    }
+    return true;
+}
+
+function validateForm() {
+    if (!elements.transactionForm) {
+        console.error("Transaction form not found");
+        return false;
+    }
+
+    const nameValid = validateField(
+        elements.transactionForm.transactionName,
+        regexRules.name,
+        "Use 3+ letters or numbers"
+    );
+    const typeValid = validateField(elements.transactionForm.transactionType);
+    const dateValid = validateField(elements.transactionForm.transactionDate);
+    const timeValid = validateField(elements.transactionForm.transactionTime);
+    const categoryValid = validateField(
+        elements.transactionForm.transactionCategory,
+        regexRules.category,
+        "Use 3+ letters or numbers"
+    );
+    const amountValid = validateField(
+        elements.transactionForm.transactionAmount,
+        regexRules.amount,
+        "Enter a valid amount (e.g., 120.50)"
+    );
+    const cardValid = validateField(
+        elements.transactionForm.transactionCard,
+        regexRules.card,
+        "Use 2+ letters or numbers"
+    );
+
+    const descriptionInput = elements.transactionForm.transactionDescription;
+    const descriptionValue = descriptionInput ? descriptionInput.value.trim() : "";
+    const descriptionError = document.querySelector("[data-error-for=\"transactionDescription\"]");
+    if (descriptionValue && !regexRules.description.test(descriptionValue)) {
+        if (descriptionError) {
+            descriptionError.textContent = "Use 3+ characters without special symbols";
+        }
+        return false;
+    }
+    if (descriptionError) {
+        descriptionError.textContent = "";
+    }
+
+    return nameValid && typeValid && dateValid && timeValid && categoryValid && amountValid && cardValid;
+}
+
+function addTransaction(form) {
+    const amountValue = Number(form.transactionAmount.value.trim());
+    const newTransaction = {
+        id: Date.now(),
+        name: form.transactionName.value.trim(),
+        type: form.transactionType.value,
+        date: form.transactionDate.value,
+        time: form.transactionTime.value,
+        category: form.transactionCategory.value.trim(),
+        amount: Number.isNaN(amountValue) ? 0 : amountValue,
+        card: form.transactionCard.value.trim(),
+        description: form.transactionDescription.value.trim()
+    };
+
+    state.transactions.unshift(newTransaction);
+    saveTransactions();
+    renderSummary();
+    populateFilterOptions();
+    renderTransactions();
+}
+
+function handleFormSubmit(event) {
+    event.preventDefault();
+    if (!validateForm()) {
+        return;
+    }
+
+    addTransaction(event.target);
+    event.target.reset();
+}
+
+function exportTransactions(format) {
+    if (!state.transactions.length) {
+        return;
+    }
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    if (format === "json") {
+        const json = JSON.stringify(state.transactions, null, 2);
+        triggerDownload(`transactions-${timestamp}.json`, "application/json", json);
+        return;
+    }
+
+    const headers = ["Name", "Type", "Date", "Time", "Category", "Amount", "Card", "Description"];
+    const rows = state.transactions.map((transaction) => [
+        transaction.name,
+        transaction.type,
+        transaction.date,
+        transaction.time,
+        transaction.category,
+        transaction.amount,
+        transaction.card,
+        transaction.description
+    ]);
+
+    const csvContent = [headers, ...rows]
+        .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
+        .join("\n");
+
+    triggerDownload(`transactions-${timestamp}.csv`, "text/csv", csvContent);
+}
+
+function triggerDownload(filename, contentType, data) {
+    const blob = new Blob([data], { type: contentType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+function initEventListeners() {
+    console.log("Initializing event listeners...");
+    
+    if (elements.navLinks && elements.navLinks.length > 0) {
+        elements.navLinks.forEach((link) => {
+            link.addEventListener("click", (event) => {
+                event.preventDefault();
+                showSection(link.getAttribute("href"));
+                if (elements.sidebar && elements.sidebar.classList.contains("mobile-open")) {
+                    elements.sidebar.classList.remove("mobile-open");
+                }
+                if (elements.mobileMenuButton) {
+                    elements.mobileMenuButton.setAttribute("aria-expanded", "false");
+                }
+            });
+        });
+    }
+
+    if (elements.searchInput) {
+        elements.searchInput.addEventListener("input", updateFilters);
+    }
+    
+    if (elements.typeFilter) {
+        elements.typeFilter.addEventListener("change", updateFilters);
+    }
+    
+    if (elements.dateFilter) {
+        elements.dateFilter.addEventListener("change", updateFilters);
+    }
+    
+    if (elements.categoryFilter) {
+        elements.categoryFilter.addEventListener("change", updateFilters);
+    }
+    
+    if (elements.amountFilter) {
+        elements.amountFilter.addEventListener("input", updateFilters);
+    }
+    
+    if (elements.cardFilter) {
+        elements.cardFilter.addEventListener("change", updateFilters);
+    }
+
+    if (elements.filterToggle && elements.filterBar) {
+        elements.filterToggle.addEventListener("click", () => {
+            elements.filterBar.classList.toggle("is-hidden");
+        });
+    }
+
+    if (elements.transactionForm) {
+        elements.transactionForm.addEventListener("submit", handleFormSubmit);
+        elements.transactionForm.addEventListener("reset", () => {
+            document.querySelectorAll(".error-text").forEach((error) => {
+                error.textContent = "";
+            });
+        });
+    }
+
+    if (elements.exportButton) {
+        elements.exportButton.addEventListener("click", () => exportTransactions("csv"));
+    }
+
+    if (elements.exportIcons && elements.exportIcons.length > 0) {
+        elements.exportIcons.forEach((button) => {
+            button.addEventListener("click", () => {
+                const action = button.getAttribute("data-action");
+                if (action === "export-csv") {
+                    exportTransactions("csv");
+                } else if (action === "export-json") {
+                    exportTransactions("json");
+                } else if (action === "import-json") {
+                    triggerImport();
+                }
+            });
+        });
+    }
+
+    if (elements.mobileMenuButton && elements.sidebar) {
+        elements.mobileMenuButton.addEventListener("click", () => {
+            const isOpen = elements.sidebar.classList.toggle("mobile-open");
+            elements.mobileMenuButton.setAttribute("aria-expanded", String(isOpen));
+        });
+    }
+
+    if (elements.themeToggle) {
+        elements.themeToggle.addEventListener("click", () => {
+            const currentTheme = document.body.classList.contains("theme-dark")
+                ? THEME_DARK
+                : THEME_LIGHT;
+            const nextTheme = currentTheme === THEME_DARK ? THEME_LIGHT : THEME_DARK;
+            localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+            applyTheme(nextTheme);
+        });
+    }
+
+    if (elements.cashflowRangeSelect) {
+        elements.cashflowRangeSelect.addEventListener("change", () => {
+            state.timeRange.cashflow = elements.cashflowRangeSelect.value;
+            renderCashflowChart();
+        });
+    }
+
+    if (elements.breakdownRangeSelect) {
+        elements.breakdownRangeSelect.addEventListener("change", () => {
+            state.timeRange.breakdown = elements.breakdownRangeSelect.value;
+            renderExpensesCategoryChart();
+        });
+    }
+
+    window.addEventListener("hashchange", () => {
+        setInitialSection();
+    });
+
+    // Add file input for importing JSON
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = ".json";
+    fileInput.id = "jsonImport";
+    fileInput.style.display = "none";
+    document.body.appendChild(fileInput);
+
+    fileInput.addEventListener("change", (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (Array.isArray(imported)) {
+                        state.transactions = imported;
+                        saveTransactions();
+                        renderSummary();
+                        populateFilterOptions();
+                        renderTransactions();
+                        alert("Transactions imported successfully!");
+                    }
+                } catch (err) {
+                    alert("Error importing file: Invalid JSON");
+                }
+            };
+            reader.readAsText(file);
+        }
+    });
+
+    // Add breakdown tab listeners
+    const breakdownTabs = document.querySelectorAll("[data-breakdown]");
+    if (breakdownTabs && breakdownTabs.length > 0) {
+        breakdownTabs.forEach((tab) => {
+            tab.addEventListener("click", () => {
+                const breakdownType = tab.getAttribute("data-breakdown");
+                state.breakdownType = breakdownType;
+                
+                // Update active tab styling
+                breakdownTabs.forEach((t) => t.classList.remove("active"));
+                tab.classList.add("active");
+                
+                // Re-render the chart
+                renderExpensesCategoryChart();
+                console.log("Breakdown type changed to:", breakdownType);
+            });
+        });
+    }
+
+    console.log("Event listeners initialized");
+}
+
+function saveTransactions() {
+    localStorage.setItem("transactions", JSON.stringify(state.transactions));
+}
+
+async function loadSeedTransactions() {
+    try {
+        const response = await fetch("./test/seed.json", { cache: "no-store" });
+        if (!response.ok) {
+            throw new Error(`Seed data request failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (!Array.isArray(data)) {
+            throw new Error("Seed data is not an array");
+        }
+
+        return data;
+    } catch (error) {
+        console.error("Failed to load seed data:", error);
+        alert("Could not load demo data from seed.json. Starting with an empty list.");
+        return [];
+    }
+}
+
+function requestStartupChoice() {
+    if (!elements.startupOverlay || !elements.loadDemoButton || !elements.startFreshButton) {
+        return Promise.resolve("fresh");
+    }
+
+    elements.startupOverlay.classList.add("is-visible");
+
+    return new Promise((resolve) => {
+        const cleanup = () => {
+            elements.startupOverlay.classList.remove("is-visible");
+        };
+
+        const handleDemo = () => {
+            cleanup();
+            resolve("demo");
+        };
+
+        const handleFresh = () => {
+            cleanup();
+            resolve("fresh");
+        };
+
+        elements.loadDemoButton.addEventListener("click", handleDemo, { once: true });
+        elements.startFreshButton.addEventListener("click", handleFresh, { once: true });
+    });
+}
+
+function triggerImport() {
+    const fileInput = document.getElementById("jsonImport");
+    if (fileInput) {
+        fileInput.click();
+    }
+}
+
+async function init() {
+    console.log("\n🚀 INITIALIZATION STARTED\n");
+
+    initTheme();
+    
+    const choice = await requestStartupChoice();
+
+    if (choice === "demo") {
+        state.transactions = await loadSeedTransactions();
+        console.log("✓ Using seed data (", state.transactions.length, "transactions)");
+    } else {
+        state.transactions = [];
+        console.log("✓ Starting with no data");
+    }
+
+    saveTransactions();
+
+    console.log("Total transactions loaded:", state.transactions.length);
+    console.log("Sample transaction:", state.transactions[0]);
+
+    console.log("\n📊 Calling renderSummary()...");
+    renderSummary();
+    
+    console.log("\n🔍 Calling populateFilterOptions()...");
+    populateFilterOptions();
+    
+    console.log("\n📋 Calling renderTransactions()...");
+    renderTransactions();
+    
+    console.log("\n📊 Rendering charts...");
+    renderCashflowChart();
+    renderExpensesCategoryChart();
+    
+    console.log("\n🎨 Calling setInitialSection()...");
+    setInitialSection();
+    
+    console.log("\n👂 Calling initEventListeners()...");
+    initEventListeners();
+    
+    console.log("\n✅ INITIALIZATION COMPLETE\n");
+    
+    // Show debug console so user can verify stats are calculated
+    setTimeout(() => showDebugConsole(), 500);
+}
+
+// Initialize when DOM is ready
+console.log("\n📜 SCRIPT LOADED");
+console.log("document.readyState:", document.readyState);
+
+if (document.readyState === "loading") {
+    console.log("⏳ DOM still loading, waiting for DOMContentLoaded...");
+    document.addEventListener("DOMContentLoaded", () => {
+        console.log("✅ DOMContentLoaded event FIRED");
+        console.log("Calling initElements()...");
+        initElements();
+        console.log("initElements() complete, now calling init()...");
+        init();
+    });
+} else {
+    // DOM is already loaded
+    console.log("✅ DOM ALREADY LOADED");
+    console.log("Calling initElements()...");
+    initElements();
+    console.log("initElements() complete, now calling init()...");
+    init();
+}
