@@ -198,3 +198,203 @@ function renderSummary() {
     } else {
         console.error("❌ balanceMeta element not found!");
     }
+   
+    // Debug display - show all stats in console as a summary table
+    console.log("═══════════════════════════════════════");
+    console.log("📊 STATS SUMMARY");  
+    console.log("═══════════════════════════════════════");
+    console.table({
+        "Total Income": formatCurrency(summary.income),
+        "Total Expense": formatCurrency(summary.expense),
+        "Balance": formatCurrency(summary.balance),
+        "Income %": `${incomeShare.toFixed(1)}%`,
+        "Expense %": `${expenseShare.toFixed(1)}%`,
+        "Transaction Count": state.transactions.length
+    });
+    console.log("═══════════════════════════════════════\n");
+    
+    console.log("✓ RENDER SUMMARY COMPLETE\n");
+}
+
+function showDebugConsole() {
+    const debugConsole = document.getElementById("debugConsole");
+    const debugOutput = document.getElementById("debugOutput");
+    
+    if (!debugConsole || !debugOutput) {
+        console.log("Debug console elements not found");
+        return;
+    }
+    
+    const summary = computeSummary(state.transactions);
+    const totalFlow = summary.income + summary.expense;
+    const incomeShare = totalFlow ? (summary.income / totalFlow) * 100 : 0;
+    const expenseShare = totalFlow ? (summary.expense / totalFlow) * 100 : 0;
+    
+    const html = `
+        <div><span style="color: #f0f4f8;">Transactions Loaded:</span> <span style="color: #7fd3a1;">${state.transactions.length}</span></div>
+        <div><span style="color: #f0f4f8;">Total Income:</span> <span style="color: #2f855a;">${formatCurrency(summary.income)}</span></div>
+        <div><span style="color: #f0f4f8;">Total Expense:</span> <span style="color: #f56565;">${formatCurrency(summary.expense)}</span></div>
+        <div><span style="color: #f0f4f8;">Balance:</span> <span style="color: #7fd3a1;">${formatCurrency(summary.balance)}</span></div>
+        <div><span style="color: #f0f4f8;">Income Share:</span> <span style="color: #2f855a;">${incomeShare.toFixed(1)}%</span></div>
+        <div><span style="color: #f0f4f8;">Expense Share:</span> <span style="color: #f56565;">${expenseShare.toFixed(1)}%</span></div>
+        <div style="margin-top: 10px; color: #cbd5e0; font-size: 11px;">✓ Stats calculated successfully</div>
+    `;
+    
+    debugOutput.innerHTML = html;
+    debugConsole.style.display = "block";
+}
+
+function getCategoryBreakdown(type, transactions) {
+    const filtered = (transactions || []).filter((t) => t.type === type);
+    const breakdown = {};
+
+    filtered.forEach((transaction) => {
+        if (!breakdown[transaction.category]) {
+            breakdown[transaction.category] = { amount: 0, count: 0 };
+        }
+        breakdown[transaction.category].amount += transaction.amount;
+        breakdown[transaction.category].count += 1;
+    });
+
+    return breakdown;
+}
+
+function getMonthsFromRange(label) {
+    const normalized = (label || "").toLowerCase().trim();
+    if (normalized === "6 months") {
+        return 6;
+    }
+    if (normalized === "3 months") {
+        return 3;
+    }
+    return 12;
+}
+
+function getLatestTransactionDate() {
+    if (!state.transactions.length) {
+        return new Date();
+    }
+
+    const latest = state.transactions.reduce((maxDate, transaction) => {
+        const current = new Date(transaction.date);
+        return current > maxDate ? current : maxDate;
+    }, new Date(state.transactions[0].date));
+
+    return Number.isNaN(latest.getTime()) ? new Date() : latest;
+}
+
+function buildRecentMonthLabels(endDate, monthsCount) {
+    const labels = [];
+    const base = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+
+    for (let offset = monthsCount - 1; offset >= 0; offset -= 1) {
+        const date = new Date(base.getFullYear(), base.getMonth() - offset, 1);
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        labels.push(`${date.getFullYear()}-${month}`);
+    }
+
+    return labels;
+}
+
+function getTransactionsInRange(rangeLabel) {
+    const monthsCount = getMonthsFromRange(rangeLabel);
+    const endDate = getLatestTransactionDate();
+    const monthLabels = buildRecentMonthLabels(endDate, monthsCount);
+    const allowed = new Set(monthLabels);
+
+    const filtered = state.transactions.filter((transaction) => {
+        const monthKey = transaction.date.substring(0, 7);
+        return allowed.has(monthKey);
+    });
+
+    return { filtered, monthLabels };
+}
+
+function populateFilterOptions() {
+    console.log("Populating filter options...");
+    
+    const categories = new Set();
+    const cards = new Set();
+    const types = new Set();
+
+    state.transactions.forEach((transaction) => {
+        categories.add(transaction.category);
+        cards.add(transaction.card);
+        types.add(transaction.type);
+    });
+
+    console.log("Categories:", Array.from(categories));
+    console.log("Cards:", Array.from(cards));
+    console.log("Types:", Array.from(types));
+
+    if (elements.typeFilter) {
+        updateSelectOptions(
+            elements.typeFilter,
+            ["All", ...Array.from(types)],
+            (value) => (value === "All" ? value : value.charAt(0).toUpperCase() + value.slice(1))
+        );
+    }
+    
+    if (elements.categoryFilter) {
+        updateSelectOptions(elements.categoryFilter, ["All", ...Array.from(categories)]);
+    }
+    
+    if (elements.cardFilter) {
+        updateSelectOptions(elements.cardFilter, ["All", ...Array.from(cards)]);
+    }
+}
+
+function updateSelectOptions(select, options, formatter) {
+    if (!select) {
+        console.error("Select element is null:", select);
+        return;
+    }
+    
+    const currentValue = select.value;
+    select.innerHTML = "";
+    options.forEach((optionValue) => {
+        const option = document.createElement("option");
+        option.textContent = formatter ? formatter(optionValue) : optionValue;
+        option.value = optionValue;
+        select.appendChild(option);
+    });
+
+    if (options.includes(currentValue)) {
+        select.value = currentValue;
+    }
+}
+
+// Global variables to store chart instances
+let cashflowChart = null;
+let expensesCategoryChart = null;
+
+function renderCashflowChart() {
+    const cashflowCanvas = document.getElementById("cashflowChart");
+    if (!cashflowCanvas) {
+        console.error("❌ cashflowChart canvas not found!");
+        return;
+    }
+
+    const rangeLabel = state.timeRange.cashflow;
+    const { filtered, monthLabels } = getTransactionsInRange(rangeLabel);
+
+    // Group by month within the selected range
+    const months = {};
+    monthLabels.forEach((label) => {
+        months[label] = { income: 0, expense: 0 };
+    });
+
+    filtered.forEach((transaction) => {
+        const monthKey = transaction.date.substring(0, 7);
+        if (!months[monthKey]) {
+            months[monthKey] = { income: 0, expense: 0 };
+        }
+        if (transaction.type === "income") {
+            months[monthKey].income += transaction.amount;
+        } else {
+            months[monthKey].expense += transaction.amount;
+        }
+    });
+
+    const labels = monthLabels;
+    const incomeData = labels.map((m) => months[m].income);
