@@ -1,0 +1,300 @@
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+/* ========================================
+   TABLET (768px - 1024px)
+   ======================================== */
+@media (max-width: 1024px) {
+    .stats-cards-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .balance-card {
+        grid-column: span 2;
+    }
+
+    .charts-container {
+        grid-template-columns: 1fr;
+    }
+
+    .bottom-row {
+        grid-template-columns: 1fr;
+    }
+
+    .filter-bar {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .top-header {
+        padding: 16px 20px;
+        gap: 16px;
+    }
+
+    .main-content {
+        padding: 20px;
+    }
+}
+
+/* ========================================
+   MOBILE (below 768px)
+   ======================================== */
+@media (max-width: 768px) {
+    :root {
+        --sidebar-width: 0;
+    }
+
+    .app-container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        display: none;
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 80vw;
+        height: 100vh;
+        z-index: 1000;
+        box-shadow: var(--shadow-lg);
+    }
+
+    .sidebar.mobile-open {
+        display: flex;
+    }
+
+    .top-header {
+        padding: 12px 16px;
+        gap: 12px;
+    }
+
+    .header-left {
+        flex: 1;
+    }
+
+    .mobile-menu-btn {
+        display: inline-flex;
+    }
+
+    .search-bar {
+        max-width: 100%;
+    }
+
+    .header-right {
+        gap: 8px;
+    }
+
+    .user-name {
+        display: none;
+    }
+
+    .dropdown-btn {
+        display: none;
+    }
+
+    .main-content {
+        padding: 16px;
+    }
+
+    .dashboard-section h2,
+    .transactions-top h2 {
+        font-size: 22px;
+    }
+
+    .stats-cards-container {
+        grid-template-columns: 1fr;
+    }
+
+    .balance-card {
+        grid-column: span 1;
+    }
+
+    .charts-container {
+        grid-template-columns: 1fr;
+    }
+
+    #cashflowChart,
+    #expensesCategoryChart,
+    .breakdown-chart {
+        height: 200px;
+    }
+
+    .bottom-row {
+        grid-template-columns: 1fr;
+    }
+
+    .filter-bar {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 16px;
+    }
+
+    .filter-group label {
+        font-size: 11px;
+    }
+
+    .table-container {
+        padding: 12px;
+        overflow-x: auto;
+    }
+
+    #transactionsTable {
+        font-size: 12px;
+    }
+
+    #transactionsTable th,
+    #transactionsTable td {
+        padding: 12px 8px;
+    }
+
+    .card {
+        padding: 16px;
+    }
+
+    .chart-card,
+    .breakdown-card,
+    .monthly-payments-card {
+        padding: 16px;
+    }
+
+    .chart-header h3,
+    .breakdown-header h3,
+    .monthly-payments-card h3 {
+        font-size: 14px;
+    }
+
+    .transactions-top {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .transactions-controls {
+        width: 100%;
+    }
+
+    .filter-btn,
+    .export-btn {
+        flex: 1;
+    }
+
+    .payment-item {
+        padding: 12px 0;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+}
+
+/* ========================================
+   SMALL MOBILE (below 480px)
+   ======================================== */
+@media (max-width: 480px) {
+    .dashboard-section h2,
+    .transactions-top h2 {
+        font-size: 18px;
+    }
+
+    .card-amount {
+        font-size: 24px;
+    }
+
+    .stats-card .card-amount {
+        font-size: 20px;
+    }
+
+    .card-label {
+        font-size: 11px;
+    }
+
+    .card-percentage {
+        font-size: 11px;
+    }
+
+    .filter-bar {
+        grid-template-columns: 1fr;
+    }
+
+    .section-subtitle {
+        font-size: 12px;
+    }
+
+    .nav-label {
+        display: none;
+    }
+
+    .nav-link {
+        justify-content: center;
+        padding: 12px;
+    }
+
+    .sidebar-export h3,
+    .sidebar-footer {
+        font-size: 10px;
+    }
+}
+
+/* ========================================
+   LANDSCAPE MODE
+   ======================================== */
+@media (max-height: 600px) and (orientation: landscape) {
+    .main-content {
+        padding: 12px;
+    }
+
+    .dashboard-section h2,
+    .transactions-top h2 {
+        margin-bottom: 16px;
+    }
+
+    .stats-cards-container {
+        margin-bottom: 16px;
+    }
+
+    .charts-container {
+        margin-bottom: 16px;
+    }
+
+    .card,
+    .chart-card,
+    .breakdown-card {
+        padding: 12px;
+    }
+
+    #cashflowChart,
+    #expensesCategoryChart,
+    .breakdown-chart {
+        height: 150px;
+    }
+}
+
+/* ========================================
+   PRINT STYLES
+   ======================================== */
+@media print {
+    .sidebar,
+    .top-header,
+    .transactions-controls,
+    .filter-bar {
+        display: none;
+    }
+
+    .main-content {
+        padding: 0;
+        background: var(--white);
+    }
+
+    .card,
+    .chart-card,
+    .breakdown-card,
+    .monthly-payments-card {
+        box-shadow: none;
+        border: 1px solid var(--border-color);
+        page-break-inside: avoid;
+    }
+}
