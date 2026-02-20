@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Finance Tracker</title>
+    <!-- CSS stylesheets files would be linked here -->
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/responsive.css">
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <div id="startupOverlay" class="startup-overlay is-visible" role="dialog" aria-modal="true" aria-labelledby="startupTitle" aria-describedby="startupDesc">
+        <div class="startup-card">
+            <h2 id="startupTitle">Start your tracker</h2>
+            <p id="startupDesc">Load demo data from seed.json or start with an empty list.</p>
+            <div class="startup-actions">
+                <button id="loadDemoBtn" class="primary-btn" type="button">Load demo data</button>
+                <button id="startFreshBtn" class="secondary-btn" type="button">Start fresh</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" role="navigation">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <h1 class="site-title">Student Finance Tracker</h1>
+                </div>
+            </div>
+
+            <nav class="main-nav">
+                <ul class="nav-list">
+                    <li><a href="#transactions" class="nav-link active">
+                        <span class="nav-icon">💳</span>
+                        <span class="nav-label">Transactions</span>
+                    </a></li>
+                    <li><a href="#dashboard" class="nav-link">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-label">Dashboard</span>
+                    </a></li>
+                </ul>
+            </nav>
+
+            <!-- Export Section -->
+            <div class="sidebar-export">
+                <h3>Export</h3>
+                <button class="export-icon-btn" data-action="export-csv" aria-label="Export to CSV">
+                    <span>📊</span>
+                </button>
+                <button class="export-icon-btn" data-action="export-json" aria-label="Export to JSON">
+                    <span>📄</span>
+                </button>
+            </div>
+
+            <!-- Social Links -->
+            <div class="sidebar-social">
+                <a href="https://www.linkedin.com/in/ntwali-beni-david-720433296?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" target="_blank" class="social-link" aria-label="LinkedIn">in</a>
+                <a href="https://github.com/ndavid-arch" target="_blank" class="social-link" aria-label="Github">
+                    <img src="assets/github-icon-size_16.png" alt="GitHub" width="16" height="16">
+                </a>
+            </div>
+
+            <div class="sidebar-footer">
+                <p>Built by<br><strong>Ntwali Beni David</strong></p>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="main-wrapper">
+            <!-- Top Header -->
+            <header role="banner" class="top-header">
+                <div class="header-left">
+                    <button id="mobileMenuBtn" class="mobile-menu-btn" type="button" aria-label="Open menu" aria-expanded="false">
+                        <span aria-hidden="true">☰</span>
+                    </button>
+                    <input type="text" id="searchInput" placeholder="Search Transaction Name" class="search-bar">
+                </div>
+                <div class="header-right">
+                    <button id="themeToggle" class="settings-btn theme-toggle" type="button" aria-label="Switch to dark mode">
+                        <span aria-hidden="true">🌙</span>
+                    </button>
+                    <button class="notification-btn" aria-label="Notifications">
+                        <span>🔔</span>
+                    </button>
+
+                    </button>
+                    <div class="user-profile">
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%237fd3a1' width='100' height='100'/%3E%3Ctext x='50' y='50' font-size='50' fill='white' text-anchor='middle' dominant-baseline='central' font-family='Arial'%3EBD%3C/text%3E%3C/svg%3E" alt="User Avatar" class="avatar">
+                        <span class="user-name">Beni David</span>
+                        <button class="dropdown-btn" aria-label="User menu">▼</button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content -->
+            <main id="main-content" role="main" class="main-content">
+                <!-- Dashboard Section -->
+                <section id="dashboard" class="dashboard-section hidden">
+                    <h2>Dashboard</h2>
+                    <p class="section-subtitle">Overview of your financial status, including total expenses, income, and budget summary.</p>
+                    
+                    <!-- Stats Cards Row -->
+                    <div class="stats-cards-container">
+                        <div class="card balance-card">
+                            <div class="card-header">
+                                <h3>Balance Amount</h3>
+                            </div>
+                            <div class="card-amount">
+                                <p id="balance-amount">$7,350</p>
+                            </div>
+                            <div class="card-date" id="balance-meta">Transactions: 0</div>
+                        </div>
+
+                        <div class="card stats-card">
+                            <div class="card-icon">📊</div>
+                            <p class="card-label">Total Income</p>
+                            <p class="card-amount" id="income-amount">$85,174</p>
+                        </div>
+
+                        <div class="card stats-card">
+                            <div class="card-icon">💰</div>
+                            <p class="card-label">Total Expense</p>
+                            <p class="card-amount" id="expenses-amount">$62,590</p>
+                        </div>
+
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div class="charts-container">
+                        <div class="chart-card cashflow-card">
+                            <div class="chart-header">
+                                <h3>Cashflow</h3>
+                                <select class="time-select">
+                                    <option>1 year</option>
+                                </select>
+                            </div>
+                            <div class="chart-legend">
+                                <span class="legend-item"><span class="legend-dot income"></span>Income</span>
+                                <span class="legend-item"><span class="legend-dot expense"></span>Expense</span>
+                            </div>
+                            <canvas id="cashflowChart"></canvas>
+                        </div>
+
+                        <div class="breakdown-card">
+                            <div class="breakdown-header">
+                                <h3>Breakdown</h3>
+                                <select class="time-select">
+                                    <option>1 year</option>
+                                </select>
+                            </div>
+                            <div class="breakdown-tabs">
+                                <button class="tab-btn active" data-breakdown="income">Income</button>
+                                <button class="tab-btn" data-breakdown="expense">Expense</button>
+                            </div>
+                            <canvas id="expensesCategoryChart" class="breakdown-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Row -->
+                    <div class="bottom-row">
+                        <div class="monthly-payments-card">
+                            <h3>Monthly Payments</h3>
+                            <div class="payment-item">
+                                <div class="payment-icon">🏠</div>
+                                <div class="payment-info">
+                                    <div class="payment-name">Rent</div>
+                                    <div class="payment-date">1st of the month</div>
+                                </div>
+                                <div class="payment-amount">$1,200</div>
+                            </div>
+                            <div class="payment-item">
+                                <div class="payment-icon">💧</div>
+                                <div class="payment-info">
+                                    <div class="payment-name">Water Bill</div>
+                                    <div class="payment-date">3rd of the month</div>
+                                </div>
+                                <div class="payment-amount">$46</div>
+                            </div>
+                            <div class="payment-item">
+                                <div class="payment-icon">⚡</div>
+                                <div class="payment-info">
+                                    <div class="payment-name">Electricity Bill</div>
+                                    <div class="payment-date">12th of the month</div>
+                                </div>
+                                <div class="payment-amount">$145</div>
+                            </div>
+                            <div class="payment-item">
+                                <div class="payment-icon">🌐</div>
+                                <div class="payment-info">
+                                    <div class="payment-name">Internet</div>
+                                    <div class="payment-date">18th of the month</div>
+                                </div>
+                                <div class="payment-amount">$60</div>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+                <!-- Transactions Section -->
+                <section id="transactions" class="transactions-section">
+                    <div class="transactions-top">
+                        <h2>Transactions</h2>
+                        <div class="transactions-controls">
+                            <button id="filterAllBtn" class="filter-btn">Filter</button>
+                            <button id="export" class="export-btn">Export</button>
+                        </div>
+                    </div>
+
+                    <!-- Filter Bar -->
+                    <div class="filter-bar">
+                        <div class="filter-group">
+                            <label>Transaction Type</label>
+                            <select id="typeFilter">
+                                <option>All</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Date</label>
+                            <input type="date" id="dateFilter">
+                        </div>
+                        <div class="filter-group">
+                            <label>Category</label>
+                            <select id="categoryFilter">
+                                <option>All</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Amount (USD)</label>
+                            <input type="number" id="amountFilter" placeholder="0">
+                        </div>
+                        <div class="filter-group">
+                            <label>Payment Method</label>
+                            <select id="cardFilter">
+                                <option>All</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Transactions Table -->
+                    <div class="table-container">
+                        <table id="transactionsTable">
+                            <thead>
+                                <tr>
+                                    <th>Transaction name</th>
+                                    <th>Payment Method</th>
+                                    <th>Date & Time</th>
+                                    <th>Amount(USD)</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionsTableBody">
+                                <!-- Transactions would be dynamically added here -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <form id="transactionForm" class="transaction-form" novalidate>
+                        <div class="form-header">
+                            <h3>Add Transaction</h3>
+                            <p class="form-subtitle">Create a new transaction record</p>
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="transactionName">Transaction Name</label>
+                                <input type="text" id="transactionName" name="transactionName" placeholder="e.g., Grocery Shopping" required>
+                                <span class="error-text" data-error-for="transactionName"></span>
+                            </div>
+                            <div class="form-group">
+                                <label for="transactionType">Transaction Type</label>
+                                <select id="transactionType" name="transactionType" required>
+                                    <option value="">Select type</option>
+                                    <option value="income">Income</option>
+                                    <option value="expense">Expense</option>
+                                </select>
+                                <span class="error-text" data-error-for="transactionType"></span>
+                            </div>
+                            <div class="form-group">
+                                <label for="transactionDate">Date</label>
+                                <input type="date" id="transactionDate" name="transactionDate" required>
+                                <span class="error-text" data-error-for="transactionDate"></span>
+                            </div>
+                            <div class="form-group">
+                                <label for="transactionTime">Time</label>
+                                <input type="time" id="transactionTime" name="transactionTime" required>
+                                <span class="error-text" data-error-for="transactionTime"></span>
+                            </div>
+                            <div class="form-group">
+                                <label for="transactionCategory">Category</label>
+                                <input type="text" id="transactionCategory" name="transactionCategory" placeholder="e.g., Housing & Utilities" required>
+                                <span class="error-text" data-error-for="transactionCategory"></span>
+                            </div>
+                            <div class="form-group">
+                                <label for="transactionAmount">Amount (USD)</label>
+                                <input type="text" id="transactionAmount" name="transactionAmount" placeholder="e.g., 125.50" required>
+                                <span class="error-text" data-error-for="transactionAmount"></span>
+                            </div>
+                            <div class="form-group">
+                                <label for="transactionCard">Payment Method</label>
+                                <select id="transactionCard" name="transactionCard" required>
+                                    <option value="">Select method</option>
+                                    <option value="MOMO">MOMO</option>
+                                    <option value="CARD">CARD</option>
+                                    <option value="CASH">CASH</option>
+                                </select>
+                                <span class="error-text" data-error-for="transactionCard"></span>
+                            </div>
+                            <div class="form-group">
+                                <label for="transactionDescription">Description</label>
+                                <input type="text" id="transactionDescription" name="transactionDescription" placeholder="Optional details">
+                                <span class="error-text" data-error-for="transactionDescription"></span>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="primary-btn">Add Transaction</button>
+                            <button type="reset" class="secondary-btn">Clear</button>
+                        </div>
+                    </form>
+                </section>
+
+
+            </main>
+        </div>
+    </div>
+    <!-- Script files would be linked here -->
+    <script src="scripts/app.js"></script>
+</body>
+</html>
