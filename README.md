@@ -1,7 +1,7 @@
 # Student Finance Tracker
 
 A clean, fast web app for students to track income and expenses with real-time dashboards, charts, and data export.
-
+Try it via www.sftracker.tech
 ## Features
 
  **Dashboard**: Balance, income/expense overview with charts
